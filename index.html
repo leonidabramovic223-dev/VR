@@ -14,7 +14,7 @@ canvas{display:none}
   position:fixed;inset:0;z-index:200;
   background:linear-gradient(135deg,#0a0a0a,#1a1a2e,#0a0a0a);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  color:#fff;padding:20px;text-align:center;
+  color:#fff;padding:20px;text-align:center;overflow-y:auto;
 }
 #intro h1{font-size:24px;color:#0f0;margin-bottom:10px;text-shadow:0 0 20px #0f06}
 #intro p{font-size:13px;color:#aaa;margin-bottom:8px;max-width:320px;line-height:1.5}
@@ -27,7 +27,6 @@ canvas{display:none}
 }
 #startBtn:active{background:#0f0;color:#000}
 .warn{color:#f66;font-size:11px;margin-top:12px;max-width:280px}
-.https-note{color:#ff0;font-size:11px;margin-top:8px;max-width:300px;line-height:1.4}
 
 #vrView{display:none;width:100vw;height:100vh}
 #vrContainer{display:flex;width:100%;height:100%}
@@ -57,22 +56,24 @@ canvas{display:none}
 }
 #msg.hide{opacity:0}
 #fps{position:fixed;top:12px;right:12px;z-index:100;color:#555;font-size:10px;font-family:monospace}
+#loadLog{color:#888;font-size:11px;margin-top:10px;max-width:300px;min-height:40px}
 </style>
 </head>
 <body>
 
 <div id="intro">
   <h1>👻 VR НЕВИДИМОСТЬ</h1>
-  <p>Нейросеть стирает людей из камеры в реальном времени. Два экрана для VR-очков.</p>
+  <p>Нейросеть стирает людей из камеры. Два экрана для VR-очков.</p>
   <div class="steps">
-    <div><div class="sn">1</div><div>Нажми СТАРТ — включится задняя камера и загрузится нейросеть</div></div>
-    <div><div class="sn">2</div><div>Наведи на пустое место (без людей!) и нажми «Запомнить фон»</div></div>
-    <div><div class="sn">3</div><div>Люди перед камерой станут невидимыми!</div></div>
-    <div><div class="sn">4</div><div>Поверни телефон боком, вставь в VR-очки</div></div>
+    <div><div class="sn">1</div><div>Нажми СТАРТ — включится камера и загрузится нейросеть</div></div>
+    <div><div class="sn">2</div><div>Наведи на пустое место и нажми «Запомнить фон»</div></div>
+    <div><div class="sn">3</div><div>Люди станут невидимыми!</div></div>
+    <div><div class="sn">4</div><div>Поверни телефон боком → в VR-очки</div></div>
   </div>
-  <p class="https-note">⚠ Камера работает ТОЛЬКО по HTTPS!<br>Загрузи на GitHub Pages или открой через Netlify Drop.</p>
+  <p style="color:#ff0;font-size:11px">⚠ Отключи VPN если нейросеть не грузится!</p>
   <button id="startBtn">⚡ СТАРТ</button>
-  <p class="warn">Не ходи в очках! Есть задержка картинки. Стой на месте.</p>
+  <div id="loadLog"></div>
+  <p class="warn">Не ходи в очках! Стой на месте.</p>
 </div>
 
 <div id="vrView">
@@ -96,11 +97,49 @@ canvas{display:none}
 <canvas id="proc"></canvas>
 <canvas id="bg"></canvas>
 
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.20.0/dist/tf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/body-pix@2.2.1/dist/body-pix.browser.umd.js"></script>
 <script>
-(async()=>{
-  const $=id=>document.getElementById(id);
+// Загрузка скриптов с проверкой и запасными CDN
+const $=id=>document.getElementById(id);
+const log=t=>{$('loadLog').textContent=t;console.log(t)};
+
+function loadScript(urls){
+  return new Promise((resolve,reject)=>{
+    let i=0;
+    function tryNext(){
+      if(i>=urls.length){reject(new Error('Не удалось загрузить скрипт'));return}
+      const url=urls[i];
+      i++;
+      log('Загрузка: '+url.split('/').pop().substring(0,30)+'...');
+      const s=document.createElement('script');
+      s.src=url;
+      s.onload=()=>resolve();
+      s.onerror=()=>{log('Не удалось, пробую другой CDN...');tryNext()};
+      document.head.appendChild(s);
+    }
+    tryNext();
+  });
+}
+
+async function loadAllScripts(){
+  // TensorFlow.js
+  log('⏳ Загрузка TensorFlow.js...');
+  await loadScript([
+    'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.20.0/dist/tf.min.js',
+    'https://unpkg.com/@tensorflow/tfjs@3.20.0/dist/tf.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/tensorflow/3.20.0/tf.min.js'
+  ]);
+  log('✅ TensorFlow.js загружен!');
+
+  // BodyPix
+  log('⏳ Загрузка BodyPix (нейросеть)...');
+  await loadScript([
+    'https://cdn.jsdelivr.net/npm/@tensorflow-models/body-pix@2.2.1/dist/body-pix.browser.umd.js',
+    'https://unpkg.com/@tensorflow-models/body-pix@2.2.1/dist/body-pix.browser.umd.js'
+  ]);
+  log('✅ BodyPix загружен!');
+}
+
+async function startApp(){
   const vid=$('vid'),Lc=$('L'),Rc=$('R'),proc=$('proc'),bgC=$('bg');
   const Lx=Lc.getContext('2d'),Rx=Rc.getContext('2d');
   const px=proc.getContext('2d',{willReadFrequently:true});
@@ -121,109 +160,82 @@ canvas{display:none}
     lastTap=n;
   });
 
-  $('startBtn').onclick=async()=>{
-    $('startBtn').textContent='⏳ Загрузка...';
-    $('startBtn').disabled=true;
-
+  // Камера
+  log('📷 Включаю заднюю камеру...');
+  let stream;
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:{exact:'environment'},width:{ideal:640},height:{ideal:480}},audio:false
+    });
+  }catch(e){
     try{
-      // ЗАДНЯЯ камера (environment = та что смотрит от тебя)
-      const stream=await navigator.mediaDevices.getUserMedia({
-        video:{facingMode:{exact:'environment'},width:{ideal:640},height:{ideal:480}},
-        audio:false
+      stream=await navigator.mediaDevices.getUserMedia({
+        video:{facingMode:'environment',width:{ideal:640},height:{ideal:480}},audio:false
       });
-      vid.srcObject=stream;
-      await vid.play();
-      await new Promise(r=>{if(vid.videoWidth)r();else vid.onloadedmetadata=r});
-
-      const w=vid.videoWidth,h=vid.videoHeight;
-      [Lc,Rc,proc,bgC].forEach(c=>{c.width=w;c.height=h});
-
-      $('intro').style.display='none';
-      $('vrView').style.display='block';
-      $('ui').classList.remove('hide');
-      msg('⏳ Нейросеть загружается...');
-
-      await tf.setBackend('webgl');
-      await tf.ready();
-      net=await bodyPix.load({
-        architecture:'MobileNetV1',
-        outputStride:16,
-        multiplier:0.50,
-        quantBytes:2
-      });
-
-      msg('✅ Готово! Наведи камеру на пустой фон → жми 📸',6000);
-      running=true;
-      loop();
-    }catch(e){
-      // Если exact environment не сработал, пробуем без exact
-      try{
-        const stream=await navigator.mediaDevices.getUserMedia({
-          video:{facingMode:'environment',width:{ideal:640},height:{ideal:480}},
-          audio:false
-        });
-        vid.srcObject=stream;
-        await vid.play();
-        await new Promise(r=>{if(vid.videoWidth)r();else vid.onloadedmetadata=r});
-
-        const w=vid.videoWidth,h=vid.videoHeight;
-        [Lc,Rc,proc,bgC].forEach(c=>{c.width=w;c.height=h});
-
-        $('intro').style.display='none';
-        $('vrView').style.display='block';
-        $('ui').classList.remove('hide');
-        msg('⏳ Нейросеть загружается...');
-
-        await tf.setBackend('webgl');
-        await tf.ready();
-        net=await bodyPix.load({
-          architecture:'MobileNetV1',
-          outputStride:16,
-          multiplier:0.50,
-          quantBytes:2
-        });
-
-        msg('✅ Готово! Наведи камеру на пустой фон → жми 📸',6000);
-        running=true;
-        loop();
-      }catch(e2){
-        alert('Ошибка камеры: '+e2.message+'\n\n1) Страница открыта по HTTPS?\n2) Разрешил доступ к камере?\n3) Камера не занята другим приложением?');
-        $('startBtn').textContent='⚡ СТАРТ';
-        $('startBtn').disabled=false;
-      }
+    }catch(e2){
+      stream=await navigator.mediaDevices.getUserMedia({video:true,audio:false});
     }
-  };
+  }
+  vid.srcObject=stream;
+  await vid.play();
+  await new Promise(r=>{if(vid.videoWidth)r();else vid.onloadedmetadata=r});
+  log('✅ Камера работает!');
 
+  const w=vid.videoWidth,h=vid.videoHeight;
+  [Lc,Rc,proc,bgC].forEach(c=>{c.width=w;c.height=h});
+
+  $('intro').style.display='none';
+  $('vrView').style.display='block';
+  $('ui').classList.remove('hide');
+  msg('⏳ Инициализация нейросети...');
+
+  // Нейросеть
+  try{
+    await tf.setBackend('webgl');
+  }catch(e){
+    await tf.setBackend('cpu');
+  }
+  await tf.ready();
+
+  net=await bodyPix.load({
+    architecture:'MobileNetV1',
+    outputStride:16,
+    multiplier:0.50,
+    quantBytes:2
+  });
+
+  msg('✅ Готово! Наведи на пустой фон → жми 📸',6000);
+
+  // Кнопки
   $('bgBtn').onclick=()=>{
     bx.drawImage(vid,0,0,bgC.width,bgC.height);
     hasBg=true;
-    msg('🎯 Фон сохранён! Люди теперь невидимы',4000);
+    msg('🎯 Фон сохранён! Люди невидимы',4000);
   };
 
   $('togBtn').onclick=()=>{
     on=!on;
-    $('togBtn').textContent=on?'👁 Эффект ВКЛ':'👁‍🗨 Эффект ВЫКЛ';
+    $('togBtn').textContent=on?'👁 Эффект ВКЛ':'👁‍🗨 ВЫКЛ';
     msg(on?'👻 Невидимость ВКЛ':'⏸ Выключено',2000);
   };
 
   $('vrBtn').onclick=async()=>{
     try{await document.documentElement.requestFullscreen()}catch(e){}
     try{await screen.orientation.lock('landscape')}catch(e){}
-    uiVis=false;
-    $('ui').classList.add('hide');
-    $('fps').style.display='none';
-    msg('🥽 VR! Двойной тап = меню',3000);
+    uiVis=false;$('ui').classList.add('hide');$('fps').style.display='none';
+    msg('🥽 VR! 2×тап = меню',3000);
   };
 
   $('rstBtn').onclick=()=>{
     hasBg=false;
-    msg('🔄 Сброс. Наведи на пустой фон → 📸',4000);
+    msg('🔄 Сброс. Наведи → 📸',4000);
   };
 
+  // Цикл
+  running=true;
   async function loop(){
     if(!running)return;
-    const w=vid.videoWidth,h=vid.videoHeight;
-    if(!w||!h){requestAnimationFrame(loop);return}
+    if(!vid.videoWidth){requestAnimationFrame(loop);return}
 
     px.drawImage(vid,0,0,w,h);
 
@@ -245,7 +257,6 @@ canvas{display:none}
             d[p]=b[p];d[p+1]=b[p+1];d[p+2]=b[p+2];
           }
         }
-        // Сглаживание границ
         for(let y=1;y<h-1;y++){
           for(let x=1;x<w-1;x++){
             const i=y*w+x;
@@ -269,7 +280,22 @@ canvas{display:none}
     if(now-lt>=1000){$('fps').textContent=fc+' FPS';fc=0;lt=now}
     requestAnimationFrame(loop);
   }
-})();
+  loop();
+}
+
+// СТАРТ
+$('startBtn').onclick=async()=>{
+  $('startBtn').textContent='⏳ Загрузка...';
+  $('startBtn').disabled=true;
+  try{
+    await loadAllScripts();
+    await startApp();
+  }catch(e){
+    alert('Ошибка: '+e.message+'\n\nПопробуй:\n1) Отключить VPN\n2) Подключиться к Wi-Fi\n3) Обновить страницу');
+    $('startBtn').textContent='⚡ СТАРТ';
+    $('startBtn').disabled=false;
+  }
+};
 </script>
 </body>
 </html>

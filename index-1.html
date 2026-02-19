@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>VR Невидимость</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;overflow:hidden;font-family:sans-serif;touch-action:none;-webkit-user-select:none;user-select:none}
+video{display:none}
+canvas{display:none}
+
+#intro{
+  position:fixed;inset:0;z-index:200;
+  background:linear-gradient(135deg,#0a0a0a,#1a1a2e,#0a0a0a);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  color:#fff;padding:20px;text-align:center;
+}
+#intro h1{font-size:24px;color:#0f0;margin-bottom:10px;text-shadow:0 0 20px #0f06}
+#intro p{font-size:13px;color:#aaa;margin-bottom:8px;max-width:320px;line-height:1.5}
+.steps{text-align:left;font-size:13px;color:#ccc;margin:15px 0;max-width:300px}
+.steps div{margin-bottom:8px;display:flex;gap:8px;align-items:flex-start}
+.sn{background:#0f0;color:#000;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:11px;flex-shrink:0}
+#startBtn{
+  margin-top:15px;padding:16px 40px;font-size:16px;font-weight:bold;
+  border:2px solid #0f0;border-radius:40px;background:transparent;color:#0f0;cursor:pointer;
+}
+#startBtn:active{background:#0f0;color:#000}
+.warn{color:#f66;font-size:11px;margin-top:12px;max-width:280px}
+.https-note{color:#ff0;font-size:11px;margin-top:8px;max-width:300px;line-height:1.4}
+
+#vrView{display:none;width:100vw;height:100vh}
+#vrContainer{display:flex;width:100%;height:100%}
+.eye{width:50%;height:100%;overflow:hidden}
+.eye canvas{display:block!important;width:100%!important;height:100%!important;object-fit:cover}
+#divider{position:absolute;top:0;left:50%;width:4px;height:100%;background:#000;z-index:10;transform:translateX(-50%)}
+
+#ui{
+  position:fixed;bottom:0;left:0;right:0;z-index:100;
+  display:flex;justify-content:center;flex-wrap:wrap;gap:8px;padding:12px;
+  background:linear-gradient(transparent,#000e);
+  transition:opacity .4s;
+}
+#ui.hide{opacity:0;pointer-events:none}
+.btn{
+  padding:10px 14px;font-size:12px;font-weight:bold;
+  border:1px solid #0f08;border-radius:8px;background:#000b;color:#0f0;cursor:pointer;
+  white-space:nowrap;
+}
+.btn:active{background:#0f03}
+.btn.red{border-color:#f668;color:#f66}
+
+#msg{
+  position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:100;
+  color:#0f0;font-size:12px;background:#000b;padding:8px 16px;border-radius:20px;
+  border:1px solid #0f04;white-space:nowrap;transition:opacity .4s;
+}
+#msg.hide{opacity:0}
+#fps{position:fixed;top:12px;right:12px;z-index:100;color:#555;font-size:10px;font-family:monospace}
+</style>
+</head>
+<body>
+
+<div id="intro">
+  <h1>👻 VR НЕВИДИМОСТЬ</h1>
+  <p>Нейросеть стирает людей из камеры в реальном времени. Два экрана для VR-очков.</p>
+  <div class="steps">
+    <div><div class="sn">1</div><div>Нажми СТАРТ — включится задняя камера и загрузится нейросеть</div></div>
+    <div><div class="sn">2</div><div>Наведи на пустое место (без людей!) и нажми «Запомнить фон»</div></div>
+    <div><div class="sn">3</div><div>Люди перед камерой станут невидимыми!</div></div>
+    <div><div class="sn">4</div><div>Поверни телефон боком, вставь в VR-очки</div></div>
+  </div>
+  <p class="https-note">⚠ Камера работает ТОЛЬКО по HTTPS!<br>Загрузи на GitHub Pages или открой через Netlify Drop.</p>
+  <button id="startBtn">⚡ СТАРТ</button>
+  <p class="warn">Не ходи в очках! Есть задержка картинки. Стой на месте.</p>
+</div>
+
+<div id="vrView">
+  <div id="vrContainer">
+    <div class="eye"><canvas id="L"></canvas></div>
+    <div id="divider"></div>
+    <div class="eye"><canvas id="R"></canvas></div>
+  </div>
+</div>
+
+<div id="msg" class="hide"></div>
+<div id="fps"></div>
+<div id="ui" class="hide">
+  <button class="btn" id="bgBtn">📸 Запомнить фон</button>
+  <button class="btn" id="togBtn">👁 Эффект ВКЛ</button>
+  <button class="btn" id="vrBtn">🥽 Полный экран</button>
+  <button class="btn red" id="rstBtn">🔄 Сброс фона</button>
+</div>
+
+<video id="vid" playsinline autoplay muted></video>
+<canvas id="proc"></canvas>
+<canvas id="bg"></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.20.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/body-pix@2.2.1/dist/body-pix.browser.umd.js"></script>
+<script>
+(async()=>{
+  const $=id=>document.getElementById(id);
+  const vid=$('vid'),Lc=$('L'),Rc=$('R'),proc=$('proc'),bgC=$('bg');
+  const Lx=Lc.getContext('2d'),Rx=Rc.getContext('2d');
+  const px=proc.getContext('2d',{willReadFrequently:true});
+  const bx=bgC.getContext('2d',{willReadFrequently:true});
+
+  let net=null,hasBg=false,on=true,running=false,uiVis=true,lastTap=0;
+  let fc=0,lt=performance.now();
+
+  function msg(t,dur){
+    $('msg').classList.remove('hide');
+    $('msg').textContent=t;
+    if(dur)setTimeout(()=>$('msg').classList.add('hide'),dur);
+  }
+
+  document.addEventListener('touchstart',()=>{
+    const n=Date.now();
+    if(n-lastTap<300){uiVis=!uiVis;$('ui').classList.toggle('hide',!uiVis)}
+    lastTap=n;
+  });
+
+  $('startBtn').onclick=async()=>{
+    $('startBtn').textContent='⏳ Загрузка...';
+    $('startBtn').disabled=true;
+
+    try{
+      // ЗАДНЯЯ камера (environment = та что смотрит от тебя)
+      const stream=await navigator.mediaDevices.getUserMedia({
+        video:{facingMode:{exact:'environment'},width:{ideal:640},height:{ideal:480}},
+        audio:false
+      });
+      vid.srcObject=stream;
+      await vid.play();
+      await new Promise(r=>{if(vid.videoWidth)r();else vid.onloadedmetadata=r});
+
+      const w=vid.videoWidth,h=vid.videoHeight;
+      [Lc,Rc,proc,bgC].forEach(c=>{c.width=w;c.height=h});
+
+      $('intro').style.display='none';
+      $('vrView').style.display='block';
+      $('ui').classList.remove('hide');
+      msg('⏳ Нейросеть загружается...');
+
+      await tf.setBackend('webgl');
+      await tf.ready();
+      net=await bodyPix.load({
+        architecture:'MobileNetV1',
+        outputStride:16,
+        multiplier:0.50,
+        quantBytes:2
+      });
+
+      msg('✅ Готово! Наведи камеру на пустой фон → жми 📸',6000);
+      running=true;
+      loop();
+    }catch(e){
+      // Если exact environment не сработал, пробуем без exact
+      try{
+        const stream=await navigator.mediaDevices.getUserMedia({
+          video:{facingMode:'environment',width:{ideal:640},height:{ideal:480}},
+          audio:false
+        });
+        vid.srcObject=stream;
+        await vid.play();
+        await new Promise(r=>{if(vid.videoWidth)r();else vid.onloadedmetadata=r});
+
+        const w=vid.videoWidth,h=vid.videoHeight;
+        [Lc,Rc,proc,bgC].forEach(c=>{c.width=w;c.height=h});
+
+        $('intro').style.display='none';
+        $('vrView').style.display='block';
+        $('ui').classList.remove('hide');
+        msg('⏳ Нейросеть загружается...');
+
+        await tf.setBackend('webgl');
+        await tf.ready();
+        net=await bodyPix.load({
+          architecture:'MobileNetV1',
+          outputStride:16,
+          multiplier:0.50,
+          quantBytes:2
+        });
+
+        msg('✅ Готово! Наведи камеру на пустой фон → жми 📸',6000);
+        running=true;
+        loop();
+      }catch(e2){
+        alert('Ошибка камеры: '+e2.message+'\n\n1) Страница открыта по HTTPS?\n2) Разрешил доступ к камере?\n3) Камера не занята другим приложением?');
+        $('startBtn').textContent='⚡ СТАРТ';
+        $('startBtn').disabled=false;
+      }
+    }
+  };
+
+  $('bgBtn').onclick=()=>{
+    bx.drawImage(vid,0,0,bgC.width,bgC.height);
+    hasBg=true;
+    msg('🎯 Фон сохранён! Люди теперь невидимы',4000);
+  };
+
+  $('togBtn').onclick=()=>{
+    on=!on;
+    $('togBtn').textContent=on?'👁 Эффект ВКЛ':'👁‍🗨 Эффект ВЫКЛ';
+    msg(on?'👻 Невидимость ВКЛ':'⏸ Выключено',2000);
+  };
+
+  $('vrBtn').onclick=async()=>{
+    try{await document.documentElement.requestFullscreen()}catch(e){}
+    try{await screen.orientation.lock('landscape')}catch(e){}
+    uiVis=false;
+    $('ui').classList.add('hide');
+    $('fps').style.display='none';
+    msg('🥽 VR! Двойной тап = меню',3000);
+  };
+
+  $('rstBtn').onclick=()=>{
+    hasBg=false;
+    msg('🔄 Сброс. Наведи на пустой фон → 📸',4000);
+  };
+
+  async function loop(){
+    if(!running)return;
+    const w=vid.videoWidth,h=vid.videoHeight;
+    if(!w||!h){requestAnimationFrame(loop);return}
+
+    px.drawImage(vid,0,0,w,h);
+
+    if(net&&hasBg&&on){
+      try{
+        const seg=await net.segmentPerson(vid,{
+          flipHorizontal:false,
+          internalResolution:'low',
+          segmentationThreshold:0.55,
+          scoreThreshold:0.3
+        });
+        const frame=px.getImageData(0,0,w,h);
+        const bgImg=bx.getImageData(0,0,w,h);
+        const d=frame.data,b=bgImg.data,m=seg.data;
+
+        for(let i=0,len=m.length;i<len;i++){
+          if(m[i]===1){
+            const p=i*4;
+            d[p]=b[p];d[p+1]=b[p+1];d[p+2]=b[p+2];
+          }
+        }
+        // Сглаживание границ
+        for(let y=1;y<h-1;y++){
+          for(let x=1;x<w-1;x++){
+            const i=y*w+x;
+            if(m[i]===0&&(m[i-1]===1||m[i+1]===1||m[i-w]===1||m[i+w]===1)){
+              const p=i*4;
+              d[p]=(d[p]+b[p])>>1;
+              d[p+1]=(d[p+1]+b[p+1])>>1;
+              d[p+2]=(d[p+2]+b[p+2])>>1;
+            }
+          }
+        }
+        px.putImageData(frame,0,0);
+      }catch(e){}
+    }
+
+    Lx.drawImage(proc,0,0,w,h,0,0,Lc.width,Lc.height);
+    Rx.drawImage(proc,0,0,w,h,0,0,Rc.width,Rc.height);
+
+    fc++;
+    const now=performance.now();
+    if(now-lt>=1000){$('fps').textContent=fc+' FPS';fc=0;lt=now}
+    requestAnimationFrame(loop);
+  }
+})();
+</script>
+</body>
+</html>

@@ -7,80 +7,106 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#000;overflow:hidden;font-family:sans-serif;touch-action:none;-webkit-user-select:none;user-select:none}
-video,#proc,#bg{display:none}
-
+video,#proc{display:none}
 #intro{
   position:fixed;inset:0;z-index:200;
   background:linear-gradient(135deg,#0a0a0a,#1a1a2e,#0a0a0a);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  color:#fff;padding:20px;text-align:center;
+  color:#fff;padding:20px;text-align:center;overflow-y:auto;
 }
-#intro h1{font-size:26px;color:#0f0;margin-bottom:8px;text-shadow:0 0 20px #0f06}
+#intro h1{font-size:22px;color:#0f0;margin-bottom:8px;text-shadow:0 0 20px #0f06}
 #intro p{font-size:13px;color:#aaa;margin-bottom:6px;max-width:320px;line-height:1.5}
-.steps{text-align:left;font-size:13px;color:#ccc;margin:12px 0;max-width:300px}
+.steps{text-align:left;font-size:13px;color:#ccc;margin:12px 0;max-width:310px}
 .steps div{margin-bottom:8px;display:flex;gap:8px;align-items:flex-start}
 .sn{background:#0f0;color:#000;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:11px;flex-shrink:0}
 #startBtn{
-  margin-top:12px;padding:16px 40px;font-size:18px;font-weight:bold;
+  margin-top:12px;padding:14px 36px;font-size:16px;font-weight:bold;
   border:2px solid #0f0;border-radius:40px;background:transparent;color:#0f0;cursor:pointer;
 }
 #startBtn:active{background:#0f0;color:#000}
-.good{color:#0f0;font-size:12px;margin-top:10px}
+.good{color:#0f0;font-size:12px;margin-top:6px}
+.warn{color:#f66;font-size:11px;margin-top:6px;max-width:290px}
+
+#scanUI{
+  position:fixed;inset:0;z-index:190;display:none;
+  background:#000;flex-direction:column;align-items:center;justify-content:center;color:#fff;padding:20px;
+}
+#scanTitle{font-size:18px;color:#ff0;margin-bottom:6px}
+#scanInfo{font-size:12px;color:#aaa;margin-bottom:10px;text-align:center;max-width:280px}
+#scanAngles{font-size:14px;color:#0f0;font-family:monospace;margin-bottom:6px}
+#scanStats{font-size:12px;color:#888;margin-bottom:8px}
+#mapWrap{position:relative;width:240px;height:120px;border:1px solid #333;border-radius:4px;overflow:hidden;margin-bottom:10px;background:#111}
+#mapC{width:100%;height:100%}
+#mapDot{position:absolute;width:8px;height:8px;background:#f00;border-radius:50%;border:1px solid #fff;transform:translate(-50%,-50%);z-index:2;transition:left .1s,top .1s}
+#scanProg{width:240px;height:8px;background:#222;border-radius:4px;overflow:hidden;margin-bottom:10px}
+#scanFill{width:0%;height:100%;background:linear-gradient(90deg,#f00,#ff0,#0f0);border-radius:4px;transition:width .3s}
+#scanDone{display:none;margin-top:6px;padding:12px 30px;font-size:14px;font-weight:bold;border:2px solid #0f0;border-radius:30px;background:transparent;color:#0f0;cursor:pointer}
+#scanDone:active{background:#0f0;color:#000}
+#scanTip{color:#ff0;font-size:11px;margin-top:8px;max-width:260px;text-align:center}
 
 #vrView{display:none;width:100vw;height:100vh}
 #vrContainer{display:flex;width:100%;height:100%}
 .eye{width:50%;height:100%;overflow:hidden}
 .eye canvas{display:block!important;width:100%!important;height:100%!important;object-fit:cover}
 #divider{position:absolute;top:0;left:50%;width:4px;height:100%;background:#000;z-index:10;transform:translateX(-50%)}
-
 #ui{
   position:fixed;bottom:0;left:0;right:0;z-index:100;
-  display:flex;justify-content:center;flex-wrap:wrap;gap:8px;padding:12px;
-  background:linear-gradient(transparent,#000e);
-  transition:opacity .4s;
+  display:flex;justify-content:center;flex-wrap:wrap;gap:6px;padding:10px;
+  background:linear-gradient(transparent,#000e);transition:opacity .4s;
 }
 #ui.hide{opacity:0;pointer-events:none}
 .btn{
-  padding:10px 14px;font-size:12px;font-weight:bold;
-  border:1px solid #0f08;border-radius:8px;background:#000b;color:#0f0;cursor:pointer;
-  white-space:nowrap;
+  padding:9px 12px;font-size:11px;font-weight:bold;
+  border:1px solid #0f08;border-radius:8px;background:#000b;color:#0f0;cursor:pointer;white-space:nowrap;
 }
 .btn:active{background:#0f03}
-.btn.red{border-color:#f668;color:#f66}
-.btn.active{background:#0f03;border-color:#0f0}
-
 #msg{
-  position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:100;
-  color:#0f0;font-size:12px;background:#000b;padding:8px 16px;border-radius:20px;
-  border:1px solid #0f04;white-space:nowrap;transition:opacity .4s;pointer-events:none;
+  position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:100;
+  color:#0f0;font-size:11px;background:#000c;padding:6px 14px;border-radius:16px;
+  border:1px solid #0f04;transition:opacity .4s;max-width:90vw;text-align:center;
 }
 #msg.hide{opacity:0}
-#fps{position:fixed;top:12px;right:12px;z-index:100;color:#555;font-size:10px;font-family:monospace}
-
-#sens{
-  position:fixed;bottom:70px;left:50%;transform:translateX(-50%);z-index:100;
-  display:none;align-items:center;gap:8px;background:#000b;padding:8px 16px;border-radius:12px;
-  border:1px solid #0f04;
+#fps{position:fixed;top:10px;right:10px;z-index:100;color:#555;font-size:10px;font-family:monospace}
+#angleDisp{position:fixed;top:10px;left:10px;z-index:100;color:#ff0;font-size:10px;font-family:monospace}
+#sliders{
+  position:fixed;top:36px;left:50%;transform:translateX(-50%);z-index:100;
+  display:none;background:#000e;padding:10px 14px;border-radius:10px;
+  flex-direction:column;gap:6px;min-width:220px;border:1px solid #0f04;
 }
-#sens label{color:#0f0;font-size:11px}
-#sens input{width:120px}
-#sensVal{color:#fff;font-size:11px;min-width:30px}
+.sl{display:flex;align-items:center;gap:6px}
+.sl label{color:#0f0;font-size:10px;width:50px}
+.sl input{flex:1;height:20px}
+.sl span{color:#fff;font-size:10px;width:28px;text-align:right}
 </style>
 </head>
 <body>
 
 <div id="intro">
-  <h1>👻 VR НЕВИДИМОСТЬ</h1>
-  <p>Стирает людей из камеры. Два экрана для VR-очков.</p>
+  <h1>👻 VR НЕВИДИМОСТЬ v8</h1>
+  <p>Полная 360° панорама комнаты! Крути головой в любом направлении.</p>
   <div class="steps">
-    <div><div class="sn">1</div><div>Нажми СТАРТ — включится камера</div></div>
-    <div><div class="sn">2</div><div>Наведи на пустое место → «Запомнить фон»</div></div>
-    <div><div class="sn">3</div><div>Люди станут невидимыми!</div></div>
-    <div><div class="sn">4</div><div>Поверни телефон боком → в VR-очки</div></div>
+    <div><div class="sn">1</div><div>Нажми СТАРТ</div></div>
+    <div><div class="sn">2</div><div><b>Сканируй комнату</b> — поворачивай телефон во все стороны: влево, вправо, вверх, вниз</div></div>
+    <div><div class="sn">3</div><div>Карта покажет что уже записано</div></div>
+    <div><div class="sn">4</div><div>Нажми ГОТОВО → в VR-очки!</div></div>
   </div>
-  <p class="good">✅ Работает без интернета! Никаких загрузок.</p>
+  <p class="good">✅ 0 библиотек. Гироскоп + 360° панорама.</p>
+  <p class="warn">⚠ При сканировании НЕ ДОЛЖНО быть людей в кадре!</p>
   <button id="startBtn">⚡ СТАРТ</button>
-  <p style="color:#f66;font-size:11px;margin-top:12px">Не ходи в очках! Стой на месте.</p>
+</div>
+
+<div id="scanUI">
+  <div id="scanTitle">📡 СКАНИРОВАНИЕ КОМНАТЫ</div>
+  <div id="scanInfo">Медленно поворачивай телефон <b>во все стороны</b>.<br>Зелёные квадратики = записано.</div>
+  <div id="scanAngles">↔ 0° ↕ 0°</div>
+  <div id="mapWrap">
+    <canvas id="mapC"></canvas>
+    <div id="mapDot"></div>
+  </div>
+  <div id="scanProg"><div id="scanFill"></div></div>
+  <div id="scanStats">Записано: 0%</div>
+  <div id="scanTip">💡 Покрути телефон чтобы заполнить карту зелёным!</div>
+  <button id="scanDone">✅ ГОТОВО — Запуск!</button>
 </div>
 
 <div id="vrView">
@@ -93,175 +119,300 @@ video,#proc,#bg{display:none}
 
 <div id="msg" class="hide"></div>
 <div id="fps"></div>
-
-<div id="sens">
-  <label>Чувствительность:</label>
-  <input type="range" id="sensRange" min="10" max="80" value="35">
-  <span id="sensVal">35</span>
+<div id="angleDisp"></div>
+<div id="sliders">
+  <div class="sl"><label>Порог:</label><input type="range" id="sThresh" min="10" max="100" value="35"><span id="vThresh">35</span></div>
+  <div class="sl"><label>Морф:</label><input type="range" id="sBlur" min="0" max="5" value="2"><span id="vBlur">2</span></div>
+  <div class="sl"><label>Кожа:</label><input type="range" id="sSkin" min="0" max="20" value="10"><span id="vSkin">10</span></div>
 </div>
-
 <div id="ui" class="hide">
-  <button class="btn" id="bgBtn">📸 Запомнить фон</button>
-  <button class="btn" id="togBtn">👁 Эффект ВКЛ</button>
-  <button class="btn" id="sensBtn">⚙ Настройка</button>
-  <button class="btn" id="vrBtn">🥽 Полный экран</button>
-  <button class="btn red" id="rstBtn">🔄 Сброс</button>
+  <button class="btn" id="rescanBtn">📡 Пересканировать</button>
+  <button class="btn" id="modeBtn">🔄 Стирание</button>
+  <button class="btn" id="togBtn">👁 ВКЛ</button>
+  <button class="btn" id="setBtn">⚙</button>
+  <button class="btn" id="vrBtn">🥽 VR</button>
 </div>
 
 <video id="vid" playsinline autoplay muted></video>
 <canvas id="proc"></canvas>
-<canvas id="bg"></canvas>
 
 <script>
 const $=id=>document.getElementById(id);
+function msg(t,dur){$('msg').classList.remove('hide');$('msg').textContent=t;if(dur)setTimeout(()=>$('msg').classList.add('hide'),dur)}
 
-function msg(t,dur){
-  $('msg').classList.remove('hide');
-  $('msg').textContent=t;
-  if(dur)setTimeout(()=>$('msg').classList.add('hide'),dur);
+// === ПАНОРАМА: сетка горизонт × вертикаль ===
+const H_STEP=5;  // градусов по горизонтали
+const V_STEP=5;  // градусов по вертикали
+const H_SLOTS=Math.ceil(360/H_STEP); // 72
+const V_SLOTS=Math.ceil(180/V_STEP); // 36
+const panGrid=new Array(H_SLOTS*V_SLOTS).fill(null);
+let filledCount=0;
+const totalSlots=H_SLOTS*V_SLOTS;
+
+// Гироскоп
+let alpha=0,beta=0,gamma=0;
+let baseAlpha=null;
+let gyroOk=false;
+
+function initGyro(){
+  return new Promise(resolve=>{
+    if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'){
+      DeviceOrientationEvent.requestPermission().then(r=>{
+        if(r==='granted'){window.addEventListener('deviceorientation',onG);gyroOk=true}
+        resolve();
+      }).catch(()=>resolve());
+    }else{
+      window.addEventListener('deviceorientation',onG);
+      setTimeout(()=>resolve(),1200);
+    }
+  });
+}
+function onG(e){
+  if(e.alpha!==null){
+    gyroOk=true;
+    alpha=e.alpha;beta=e.beta;gamma=e.gamma;
+    if(baseAlpha===null)baseAlpha=alpha;
+  }
 }
 
-$('startBtn').onclick=async()=>{
-  $('startBtn').textContent='📷 Включаю камеру...';
-  $('startBtn').disabled=true;
+// Горизонтальный угол: 0..360
+function getH(){
+  let a=alpha-baseAlpha;
+  return((a%360)+360)%360;
+}
+// Вертикальный угол: 0..180 (0=вверх, 90=горизонт, 180=вниз)
+function getV(){
+  // beta: -180..180, при горизонте ~90
+  let b=beta;
+  if(b<0)b+=360;
+  // Нормализуем к 0..180
+  b=Math.max(0,Math.min(180,b));
+  return b;
+}
 
-  const vid=$('vid'),Lc=$('L'),Rc=$('R'),proc=$('proc'),bgC=$('bg');
+function hvToSlot(h,v){
+  const sh=Math.floor(h/H_STEP)%H_SLOTS;
+  const sv=Math.max(0,Math.min(V_SLOTS-1,Math.floor(v/V_STEP)));
+  return sv*H_SLOTS+sh;
+}
+function slotToXY(slot){
+  const sh=slot%H_SLOTS;
+  const sv=Math.floor(slot/H_SLOTS);
+  return[sh,sv];
+}
+
+// === СТАРТ ===
+$('startBtn').onclick=async()=>{
+  $('startBtn').textContent='⏳';$('startBtn').disabled=true;
+
+  const vid=$('vid'),Lc=$('L'),Rc=$('R'),proc=$('proc');
   const Lx=Lc.getContext('2d'),Rx=Rc.getContext('2d');
   const px=proc.getContext('2d',{willReadFrequently:true});
-  const bx=bgC.getContext('2d',{willReadFrequently:true});
 
-  let hasBg=false,on=true,uiVis=true,lastTap=0,sensShow=false;
-  let threshold=35;
+  let on=true,uiVis=true,lastTap=0,showSet=false;
+  let mode=0;
+  const modeNames=['Стирание','Размытие','Призрак'];
   let fc=0,lt=performance.now();
-  let bgData=null;
+  let threshold=35,morphBlur=2,skinBonus=10;
+  let mask,mask2;
 
-  // Камера
-  let stream;
-  try{
-    stream=await navigator.mediaDevices.getUserMedia({
-      video:{facingMode:{exact:'environment'},width:{ideal:480},height:{ideal:360}},audio:false
-    });
-  }catch(e){
-    try{
-      stream=await navigator.mediaDevices.getUserMedia({
-        video:{facingMode:'environment',width:{ideal:480},height:{ideal:360}},audio:false
-      });
-    }catch(e2){
-      try{
-        stream=await navigator.mediaDevices.getUserMedia({video:true,audio:false});
-      }catch(e3){
-        alert('Не удалось включить камеру. Разреши доступ и обнови страницу.');
-        $('startBtn').textContent='⚡ СТАРТ';
-        $('startBtn').disabled=false;
-        return;
-      }
-    }
-  }
-  vid.srcObject=stream;
-  await vid.play();
-  await new Promise(r=>{if(vid.videoWidth)r();else vid.onloadedmetadata=r});
-
-  const w=vid.videoWidth,h=vid.videoHeight;
-  [Lc,Rc,proc,bgC].forEach(c=>{c.width=w;c.height=h});
-
-  $('intro').style.display='none';
-  $('vrView').style.display='block';
-  $('ui').classList.remove('hide');
-  msg('✅ Камера работает! Наведи на пустой фон → 📸',5000);
-
-  // Двойное нажатие — скрыть/показать UI
   document.addEventListener('touchstart',()=>{
     const n=Date.now();
-    if(n-lastTap<300){
-      uiVis=!uiVis;
-      $('ui').classList.toggle('hide',!uiVis);
-      if(!uiVis){$('sens').style.display='none';sensShow=false}
-    }
+    if(n-lastTap<300){uiVis=!uiVis;$('ui').classList.toggle('hide',!uiVis);if(!uiVis){$('sliders').style.display='none';showSet=false}}
     lastTap=n;
   });
 
-  // Чувствительность
-  $('sensRange').oninput=function(){
-    threshold=parseInt(this.value);
-    $('sensVal').textContent=threshold;
-  };
+  // Камера
+  let stream;
+  try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{exact:'environment'},width:{ideal:480},height:{ideal:360}},audio:false})}
+  catch(e){try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:480},height:{ideal:360}},audio:false})}
+  catch(e2){stream=await navigator.mediaDevices.getUserMedia({video:true,audio:false})}}
+  vid.srcObject=stream;
+  await vid.play();
+  await new Promise(r=>{if(vid.videoWidth)r();else vid.onloadedmetadata=()=>{vid.play().then(r)}});
+
+  const w=vid.videoWidth,h=vid.videoHeight,total=w*h;
+  [Lc,Rc,proc].forEach(c=>{c.width=w;c.height=h});
+  mask=new Uint8Array(total);
+  mask2=new Uint8Array(total);
+
+  await initGyro();
+  if(!gyroOk){
+    alert('Гироскоп не найден!\nИспользуй телефон, не компьютер.');
+    return;
+  }
+
+  // Утилиты
+  function skinScore(r,g,b){
+    if(r<30||g<15||b<10)return 0;
+    if(r>230&&g>220&&b>210)return 0;
+    if(r>80&&g>40&&b>20&&r>g&&(r-g)>10&&(r-b)>15&&r/(g+1)<2.8)return 1;
+    if(r>40&&g>25&&b>15&&r>=g&&(r-b)>5){const rt=r/(b+1);if(rt>1.1&&rt<4)return .7}
+    return 0;
+  }
+  function erode(s,d,w,h){d.set(s);for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){const i=y*w+x;if(s[i]&&(!s[i-1]||!s[i+1]||!s[i-w]||!s[i+w]))d[i]=0}}
+  function dilate(s,d,w,h,r){d.set(s);for(let y=r;y<h-r;y++)for(let x=r;x<w-r;x++){if(s[y*w+x])continue;let f=false;for(let dy=-r;dy<=r&&!f;dy++)for(let dx=-r;dx<=r&&!f;dx++)if(s[(y+dy)*w+(x+dx)])f=true;if(f)d[y*w+x]=1}}
+
+  // === СКАНИРОВАНИЕ ===
+  async function doScan(){
+    panGrid.fill(null);filledCount=0;baseAlpha=alpha;
+
+    $('scanUI').style.display='flex';
+    $('scanDone').style.display='none';
+    $('scanFill').style.width='0%';
+
+    const mapC=$('mapC');
+    mapC.width=H_SLOTS;mapC.height=V_SLOTS;
+    const mCtx=mapC.getContext('2d');
+    mCtx.fillStyle='#111';mCtx.fillRect(0,0,H_SLOTS,V_SLOTS);
+
+    return new Promise(resolve=>{
+      const iv=setInterval(()=>{
+        if(!vid.videoWidth)return;
+        const hAngle=getH(),vAngle=getV();
+        const slot=hvToSlot(hAngle,vAngle);
+
+        $('scanAngles').textContent='↔ '+Math.round(hAngle)+'° ↕ '+Math.round(vAngle)+'°';
+
+        // Позиция точки на карте
+        $('mapDot').style.left=(hAngle/360*100)+'%';
+        $('mapDot').style.top=(vAngle/180*100)+'%';
+
+        // Записать кадр
+        px.drawImage(vid,0,0,w,h);
+        const fData=px.getImageData(0,0,w,h);
+
+        if(!panGrid[slot]){
+          filledCount++;
+          // Нарисовать зелёный квадрат на карте
+          const[sx,sy]=slotToXY(slot);
+          mCtx.fillStyle='#0a0';
+          mCtx.fillRect(sx,sy,1,1);
+        }
+        panGrid[slot]=fData;
+
+        const pct=Math.round(filledCount/totalSlots*100);
+        $('scanFill').style.width=pct+'%';
+        $('scanStats').textContent='Записано: '+pct+'% ('+filledCount+'/'+totalSlots+')';
+
+        if(pct>=5)$('scanDone').style.display='block';
+
+        if(pct<15){
+          $('scanTip').textContent='💡 Покрути телефон во все стороны!';
+        }else if(pct<40){
+          $('scanTip').textContent='👍 Хорошо! Попробуй также вверх и вниз';
+        }else{
+          $('scanTip').textContent='🎯 Отлично! Можно нажать ГОТОВО';
+        }
+      },80);
+
+      $('scanDone').onclick=()=>{
+        clearInterval(iv);
+        $('scanUI').style.display='none';
+        resolve();
+      };
+    });
+  }
+
+  $('intro').style.display='none';
+  await doScan();
+
+  // === LIVE ===
+  $('vrView').style.display='block';
+  $('ui').classList.remove('hide');
+  msg('👻 Люди невидимы! Крути головой в любую сторону!',5000);
+
+  function getCurrentBg(){
+    const hA=getH(),vA=getV();
+    const slot=hvToSlot(hA,vA);
+    if(panGrid[slot])return panGrid[slot].data;
+    // Ближайший заполненный — поиск спиралью
+    const sh=slot%H_SLOTS,sv=Math.floor(slot/H_SLOTS);
+    for(let r=1;r<Math.max(H_SLOTS,V_SLOTS)/2;r++){
+      for(let dy=-r;dy<=r;dy++){
+        for(let dx=-r;dx<=r;dx++){
+          if(Math.abs(dx)!==r&&Math.abs(dy)!==r)continue; // только край квадрата
+          const nx=((sh+dx)%H_SLOTS+H_SLOTS)%H_SLOTS;
+          const ny=Math.max(0,Math.min(V_SLOTS-1,sv+dy));
+          const ns=ny*H_SLOTS+nx;
+          if(panGrid[ns])return panGrid[ns].data;
+        }
+      }
+    }
+    return null;
+  }
 
   // Кнопки
-  $('bgBtn').onclick=()=>{
-    bx.drawImage(vid,0,0,bgC.width,bgC.height);
-    bgData=bx.getImageData(0,0,w,h);
-    hasBg=true;
-    msg('🎯 Фон сохранён! Люди исчезают!',4000);
+  $('rescanBtn').onclick=async()=>{
+    on=false;
+    $('vrView').style.display='none';$('ui').classList.add('hide');
+    await doScan();
+    $('vrView').style.display='block';$('ui').classList.remove('hide');
+    on=true;
+    msg('👻 Обновлено!',3000);
   };
-
-  $('togBtn').onclick=()=>{
-    on=!on;
-    $('togBtn').textContent=on?'👁 Эффект ВКЛ':'👁‍🗨 ВЫКЛ';
-    $('togBtn').classList.toggle('active',on);
-    msg(on?'👻 Невидимость ВКЛ':'⏸ Выключено',2000);
-  };
-
-  $('sensBtn').onclick=()=>{
-    sensShow=!sensShow;
-    $('sens').style.display=sensShow?'flex':'none';
-  };
-
+  $('modeBtn').onclick=()=>{mode=(mode+1)%3;$('modeBtn').textContent='🔄 '+modeNames[mode];msg(modeNames[mode],2000)};
+  $('togBtn').onclick=()=>{on=!on;$('togBtn').textContent=on?'👁 ВКЛ':'👁 ВЫКЛ'};
+  $('setBtn').onclick=()=>{showSet=!showSet;$('sliders').style.display=showSet?'flex':'none'};
   $('vrBtn').onclick=async()=>{
     try{await document.documentElement.requestFullscreen()}catch(e){}
     try{await screen.orientation.lock('landscape')}catch(e){}
-    uiVis=false;
-    $('ui').classList.add('hide');
-    $('sens').style.display='none';
-    sensShow=false;
-    $('fps').style.display='none';
-    msg('🥽 VR режим! 2×тап = меню',3000);
+    uiVis=false;$('ui').classList.add('hide');$('fps').style.display='none';$('sliders').style.display='none';$('angleDisp').style.display='none';
+    msg('🥽 VR! 2×тап=меню',3000);
   };
+  $('sThresh').oninput=()=>{threshold=+$('sThresh').value;$('vThresh').textContent=threshold};
+  $('sBlur').oninput=()=>{morphBlur=+$('sBlur').value;$('vBlur').textContent=morphBlur};
+  $('sSkin').oninput=()=>{skinBonus=+$('sSkin').value;$('vSkin').textContent=skinBonus};
 
-  $('rstBtn').onclick=()=>{
-    hasBg=false;bgData=null;
-    msg('🔄 Сброс. Наведи на фон → 📸',4000);
-  };
-
-  // Основной цикл — вычитание фона (чистый JS, без нейросети)
+  // === ЦИКЛ ===
   function loop(){
     if(!vid.videoWidth){requestAnimationFrame(loop);return}
-
     px.drawImage(vid,0,0,w,h);
 
-    if(hasBg&&on&&bgData){
-      const frame=px.getImageData(0,0,w,h);
-      const d=frame.data;
-      const b=bgData.data;
-      const th=threshold*threshold*3; // предвычисленный порог²
-      const len=d.length;
+    if(gyroOk)$('angleDisp').textContent='↔'+Math.round(getH())+'° ↕'+Math.round(getV())+'°';
 
-      // Быстрое сравнение без sqrt (сравниваем квадраты)
-      for(let i=0;i<len;i+=4){
-        const dr=d[i]-b[i];
-        const dg=d[i+1]-b[i+1];
-        const db=d[i+2]-b[i+2];
-        const diff2=dr*dr+dg*dg+db*db;
+    if(on){
+      const bg=getCurrentBg();
+      if(bg){
+        const frame=px.getImageData(0,0,w,h);
+        const d=frame.data;
+        const th=threshold;
 
-        if(diff2>th){
-          // Пиксель отличается → заменяем на фон
-          d[i]=b[i];
-          d[i+1]=b[i+1];
-          d[i+2]=b[i+2];
+        for(let i=0;i<total;i++){
+          const p=i*4;
+          const r=d[p],g=d[p+1],b=d[p+2];
+          const dr=r-bg[p],dg=g-bg[p+1],db=b-bg[p+2];
+          const dist=Math.sqrt(dr*dr+dg*dg+db*db);
+          const sk=skinScore(r,g,b);
+          mask[i]=dist>(th-sk*skinBonus)?1:0;
         }
-      }
 
-      px.putImageData(frame,0,0);
+        if(morphBlur>=1){erode(mask,mask2,w,h);dilate(mask2,mask,w,h,morphBlur)}
+
+        if(mode===0){
+          for(let i=0;i<total;i++){if(mask[i]){const p=i*4;d[p]=bg[p];d[p+1]=bg[p+1];d[p+2]=bg[p+2]}}
+          for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){const i=y*w+x;if(!mask[i]){const n=mask[i-1]+mask[i+1]+mask[i-w]+mask[i+w];if(n>0&&n<4){const p=i*4;const a=n/4*.5;d[p]=d[p]*(1-a)+bg[p]*a;d[p+1]=d[p+1]*(1-a)+bg[p+1]*a;d[p+2]=d[p+2]*(1-a)+bg[p+2]*a}}}
+        }else if(mode===1){
+          const bs=12;
+          for(let by=0;by<h;by+=bs)for(let bx=0;bx<w;bx+=bs){
+            let sr=0,sg=0,sb=0,cnt=0,hf=false;
+            for(let dy=0;dy<bs&&by+dy<h;dy++)for(let dx=0;dx<bs&&bx+dx<w;dx++){const i=(by+dy)*w+(bx+dx);if(mask[i])hf=true;const p=i*4;sr+=d[p];sg+=d[p+1];sb+=d[p+2];cnt++}
+            if(hf&&cnt){sr/=cnt;sg/=cnt;sb/=cnt;for(let dy=0;dy<bs&&by+dy<h;dy++)for(let dx=0;dx<bs&&bx+dx<w;dx++){const i=(by+dy)*w+(bx+dx);if(mask[i]){const p=i*4;d[p]=sr;d[p+1]=sg;d[p+2]=sb}}}
+          }
+        }else{
+          for(let i=0;i<total;i++){if(mask[i]){const p=i*4;d[p]=bg[p]*.75+d[p]*.25;d[p+1]=bg[p+1]*.75+d[p+1]*.25;d[p+2]=bg[p+2]*.75+d[p+2]*.25}}
+        }
+        px.putImageData(frame,0,0);
+      }
     }
 
     Lx.drawImage(proc,0,0,w,h,0,0,Lc.width,Lc.height);
     Rx.drawImage(proc,0,0,w,h,0,0,Rc.width,Rc.height);
-
-    fc++;
-    const now=performance.now();
+    fc++;const now=performance.now();
     if(now-lt>=1000){$('fps').textContent=fc+' FPS';fc=0;lt=now}
     requestAnimationFrame(loop);
   }
-  loop();
+  requestAnimationFrame(loop);
 };
 </script>
 </body>

@@ -7,26 +7,25 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#000;overflow:hidden;font-family:sans-serif;touch-action:none;-webkit-user-select:none;user-select:none}
-video{display:none}
-canvas{display:none}
+video,#proc,#bg{display:none}
 
 #intro{
   position:fixed;inset:0;z-index:200;
   background:linear-gradient(135deg,#0a0a0a,#1a1a2e,#0a0a0a);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  color:#fff;padding:20px;text-align:center;overflow-y:auto;
+  color:#fff;padding:20px;text-align:center;
 }
-#intro h1{font-size:24px;color:#0f0;margin-bottom:10px;text-shadow:0 0 20px #0f06}
-#intro p{font-size:13px;color:#aaa;margin-bottom:8px;max-width:320px;line-height:1.5}
-.steps{text-align:left;font-size:13px;color:#ccc;margin:15px 0;max-width:300px}
+#intro h1{font-size:26px;color:#0f0;margin-bottom:8px;text-shadow:0 0 20px #0f06}
+#intro p{font-size:13px;color:#aaa;margin-bottom:6px;max-width:320px;line-height:1.5}
+.steps{text-align:left;font-size:13px;color:#ccc;margin:12px 0;max-width:300px}
 .steps div{margin-bottom:8px;display:flex;gap:8px;align-items:flex-start}
 .sn{background:#0f0;color:#000;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:11px;flex-shrink:0}
 #startBtn{
-  margin-top:15px;padding:16px 40px;font-size:16px;font-weight:bold;
+  margin-top:12px;padding:16px 40px;font-size:18px;font-weight:bold;
   border:2px solid #0f0;border-radius:40px;background:transparent;color:#0f0;cursor:pointer;
 }
 #startBtn:active{background:#0f0;color:#000}
-.warn{color:#f66;font-size:11px;margin-top:12px;max-width:280px}
+.good{color:#0f0;font-size:12px;margin-top:10px}
 
 #vrView{display:none;width:100vw;height:100vh}
 #vrContainer{display:flex;width:100%;height:100%}
@@ -48,32 +47,40 @@ canvas{display:none}
 }
 .btn:active{background:#0f03}
 .btn.red{border-color:#f668;color:#f66}
+.btn.active{background:#0f03;border-color:#0f0}
 
 #msg{
   position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:100;
   color:#0f0;font-size:12px;background:#000b;padding:8px 16px;border-radius:20px;
-  border:1px solid #0f04;white-space:nowrap;transition:opacity .4s;
+  border:1px solid #0f04;white-space:nowrap;transition:opacity .4s;pointer-events:none;
 }
 #msg.hide{opacity:0}
 #fps{position:fixed;top:12px;right:12px;z-index:100;color:#555;font-size:10px;font-family:monospace}
-#loadLog{color:#888;font-size:11px;margin-top:10px;max-width:300px;min-height:40px}
+
+#sens{
+  position:fixed;bottom:70px;left:50%;transform:translateX(-50%);z-index:100;
+  display:none;align-items:center;gap:8px;background:#000b;padding:8px 16px;border-radius:12px;
+  border:1px solid #0f04;
+}
+#sens label{color:#0f0;font-size:11px}
+#sens input{width:120px}
+#sensVal{color:#fff;font-size:11px;min-width:30px}
 </style>
 </head>
 <body>
 
 <div id="intro">
   <h1>👻 VR НЕВИДИМОСТЬ</h1>
-  <p>Нейросеть стирает людей из камеры. Два экрана для VR-очков.</p>
+  <p>Стирает людей из камеры. Два экрана для VR-очков.</p>
   <div class="steps">
-    <div><div class="sn">1</div><div>Нажми СТАРТ — включится камера и загрузится нейросеть</div></div>
-    <div><div class="sn">2</div><div>Наведи на пустое место и нажми «Запомнить фон»</div></div>
+    <div><div class="sn">1</div><div>Нажми СТАРТ — включится камера</div></div>
+    <div><div class="sn">2</div><div>Наведи на пустое место → «Запомнить фон»</div></div>
     <div><div class="sn">3</div><div>Люди станут невидимыми!</div></div>
     <div><div class="sn">4</div><div>Поверни телефон боком → в VR-очки</div></div>
   </div>
-  <p style="color:#ff0;font-size:11px">⚠ Отключи VPN если нейросеть не грузится!</p>
+  <p class="good">✅ Работает без интернета! Никаких загрузок.</p>
   <button id="startBtn">⚡ СТАРТ</button>
-  <div id="loadLog"></div>
-  <p class="warn">Не ходи в очках! Стой на месте.</p>
+  <p style="color:#f66;font-size:11px;margin-top:12px">Не ходи в очках! Стой на месте.</p>
 </div>
 
 <div id="vrView">
@@ -86,11 +93,19 @@ canvas{display:none}
 
 <div id="msg" class="hide"></div>
 <div id="fps"></div>
+
+<div id="sens">
+  <label>Чувствительность:</label>
+  <input type="range" id="sensRange" min="10" max="80" value="35">
+  <span id="sensVal">35</span>
+</div>
+
 <div id="ui" class="hide">
   <button class="btn" id="bgBtn">📸 Запомнить фон</button>
   <button class="btn" id="togBtn">👁 Эффект ВКЛ</button>
+  <button class="btn" id="sensBtn">⚙ Настройка</button>
   <button class="btn" id="vrBtn">🥽 Полный экран</button>
-  <button class="btn red" id="rstBtn">🔄 Сброс фона</button>
+  <button class="btn red" id="rstBtn">🔄 Сброс</button>
 </div>
 
 <video id="vid" playsinline autoplay muted></video>
@@ -98,88 +113,53 @@ canvas{display:none}
 <canvas id="bg"></canvas>
 
 <script>
-// Загрузка скриптов с проверкой и запасными CDN
 const $=id=>document.getElementById(id);
-const log=t=>{$('loadLog').textContent=t;console.log(t)};
 
-function loadScript(urls){
-  return new Promise((resolve,reject)=>{
-    let i=0;
-    function tryNext(){
-      if(i>=urls.length){reject(new Error('Не удалось загрузить скрипт'));return}
-      const url=urls[i];
-      i++;
-      log('Загрузка: '+url.split('/').pop().substring(0,30)+'...');
-      const s=document.createElement('script');
-      s.src=url;
-      s.onload=()=>resolve();
-      s.onerror=()=>{log('Не удалось, пробую другой CDN...');tryNext()};
-      document.head.appendChild(s);
-    }
-    tryNext();
-  });
+function msg(t,dur){
+  $('msg').classList.remove('hide');
+  $('msg').textContent=t;
+  if(dur)setTimeout(()=>$('msg').classList.add('hide'),dur);
 }
 
-async function loadAllScripts(){
-  // TensorFlow.js
-  log('⏳ Загрузка TensorFlow.js...');
-  await loadScript([
-    'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.20.0/dist/tf.min.js',
-    'https://unpkg.com/@tensorflow/tfjs@3.20.0/dist/tf.min.js',
-    'https://cdnjs.cloudflare.com/ajax/libs/tensorflow/3.20.0/tf.min.js'
-  ]);
-  log('✅ TensorFlow.js загружен!');
+$('startBtn').onclick=async()=>{
+  $('startBtn').textContent='📷 Включаю камеру...';
+  $('startBtn').disabled=true;
 
-  // BodyPix
-  log('⏳ Загрузка BodyPix (нейросеть)...');
-  await loadScript([
-    'https://cdn.jsdelivr.net/npm/@tensorflow-models/body-pix@2.2.1/dist/body-pix.browser.umd.js',
-    'https://unpkg.com/@tensorflow-models/body-pix@2.2.1/dist/body-pix.browser.umd.js'
-  ]);
-  log('✅ BodyPix загружен!');
-}
-
-async function startApp(){
   const vid=$('vid'),Lc=$('L'),Rc=$('R'),proc=$('proc'),bgC=$('bg');
   const Lx=Lc.getContext('2d'),Rx=Rc.getContext('2d');
   const px=proc.getContext('2d',{willReadFrequently:true});
   const bx=bgC.getContext('2d',{willReadFrequently:true});
 
-  let net=null,hasBg=false,on=true,running=false,uiVis=true,lastTap=0;
+  let hasBg=false,on=true,uiVis=true,lastTap=0,sensShow=false;
+  let threshold=35;
   let fc=0,lt=performance.now();
-
-  function msg(t,dur){
-    $('msg').classList.remove('hide');
-    $('msg').textContent=t;
-    if(dur)setTimeout(()=>$('msg').classList.add('hide'),dur);
-  }
-
-  document.addEventListener('touchstart',()=>{
-    const n=Date.now();
-    if(n-lastTap<300){uiVis=!uiVis;$('ui').classList.toggle('hide',!uiVis)}
-    lastTap=n;
-  });
+  let bgData=null;
 
   // Камера
-  log('📷 Включаю заднюю камеру...');
   let stream;
   try{
     stream=await navigator.mediaDevices.getUserMedia({
-      video:{facingMode:{exact:'environment'},width:{ideal:640},height:{ideal:480}},audio:false
+      video:{facingMode:{exact:'environment'},width:{ideal:480},height:{ideal:360}},audio:false
     });
   }catch(e){
     try{
       stream=await navigator.mediaDevices.getUserMedia({
-        video:{facingMode:'environment',width:{ideal:640},height:{ideal:480}},audio:false
+        video:{facingMode:'environment',width:{ideal:480},height:{ideal:360}},audio:false
       });
     }catch(e2){
-      stream=await navigator.mediaDevices.getUserMedia({video:true,audio:false});
+      try{
+        stream=await navigator.mediaDevices.getUserMedia({video:true,audio:false});
+      }catch(e3){
+        alert('Не удалось включить камеру. Разреши доступ и обнови страницу.');
+        $('startBtn').textContent='⚡ СТАРТ';
+        $('startBtn').disabled=false;
+        return;
+      }
     }
   }
   vid.srcObject=stream;
   await vid.play();
   await new Promise(r=>{if(vid.videoWidth)r();else vid.onloadedmetadata=r});
-  log('✅ Камера работает!');
 
   const w=vid.videoWidth,h=vid.videoHeight;
   [Lc,Rc,proc,bgC].forEach(c=>{c.width=w;c.height=h});
@@ -187,89 +167,90 @@ async function startApp(){
   $('intro').style.display='none';
   $('vrView').style.display='block';
   $('ui').classList.remove('hide');
-  msg('⏳ Инициализация нейросети...');
+  msg('✅ Камера работает! Наведи на пустой фон → 📸',5000);
 
-  // Нейросеть
-  try{
-    await tf.setBackend('webgl');
-  }catch(e){
-    await tf.setBackend('cpu');
-  }
-  await tf.ready();
-
-  net=await bodyPix.load({
-    architecture:'MobileNetV1',
-    outputStride:16,
-    multiplier:0.50,
-    quantBytes:2
+  // Двойное нажатие — скрыть/показать UI
+  document.addEventListener('touchstart',()=>{
+    const n=Date.now();
+    if(n-lastTap<300){
+      uiVis=!uiVis;
+      $('ui').classList.toggle('hide',!uiVis);
+      if(!uiVis){$('sens').style.display='none';sensShow=false}
+    }
+    lastTap=n;
   });
 
-  msg('✅ Готово! Наведи на пустой фон → жми 📸',6000);
+  // Чувствительность
+  $('sensRange').oninput=function(){
+    threshold=parseInt(this.value);
+    $('sensVal').textContent=threshold;
+  };
 
   // Кнопки
   $('bgBtn').onclick=()=>{
     bx.drawImage(vid,0,0,bgC.width,bgC.height);
+    bgData=bx.getImageData(0,0,w,h);
     hasBg=true;
-    msg('🎯 Фон сохранён! Люди невидимы',4000);
+    msg('🎯 Фон сохранён! Люди исчезают!',4000);
   };
 
   $('togBtn').onclick=()=>{
     on=!on;
     $('togBtn').textContent=on?'👁 Эффект ВКЛ':'👁‍🗨 ВЫКЛ';
+    $('togBtn').classList.toggle('active',on);
     msg(on?'👻 Невидимость ВКЛ':'⏸ Выключено',2000);
+  };
+
+  $('sensBtn').onclick=()=>{
+    sensShow=!sensShow;
+    $('sens').style.display=sensShow?'flex':'none';
   };
 
   $('vrBtn').onclick=async()=>{
     try{await document.documentElement.requestFullscreen()}catch(e){}
     try{await screen.orientation.lock('landscape')}catch(e){}
-    uiVis=false;$('ui').classList.add('hide');$('fps').style.display='none';
-    msg('🥽 VR! 2×тап = меню',3000);
+    uiVis=false;
+    $('ui').classList.add('hide');
+    $('sens').style.display='none';
+    sensShow=false;
+    $('fps').style.display='none';
+    msg('🥽 VR режим! 2×тап = меню',3000);
   };
 
   $('rstBtn').onclick=()=>{
-    hasBg=false;
-    msg('🔄 Сброс. Наведи → 📸',4000);
+    hasBg=false;bgData=null;
+    msg('🔄 Сброс. Наведи на фон → 📸',4000);
   };
 
-  // Цикл
-  running=true;
-  async function loop(){
-    if(!running)return;
+  // Основной цикл — вычитание фона (чистый JS, без нейросети)
+  function loop(){
     if(!vid.videoWidth){requestAnimationFrame(loop);return}
 
     px.drawImage(vid,0,0,w,h);
 
-    if(net&&hasBg&&on){
-      try{
-        const seg=await net.segmentPerson(vid,{
-          flipHorizontal:false,
-          internalResolution:'low',
-          segmentationThreshold:0.55,
-          scoreThreshold:0.3
-        });
-        const frame=px.getImageData(0,0,w,h);
-        const bgImg=bx.getImageData(0,0,w,h);
-        const d=frame.data,b=bgImg.data,m=seg.data;
+    if(hasBg&&on&&bgData){
+      const frame=px.getImageData(0,0,w,h);
+      const d=frame.data;
+      const b=bgData.data;
+      const th=threshold*threshold*3; // предвычисленный порог²
+      const len=d.length;
 
-        for(let i=0,len=m.length;i<len;i++){
-          if(m[i]===1){
-            const p=i*4;
-            d[p]=b[p];d[p+1]=b[p+1];d[p+2]=b[p+2];
-          }
+      // Быстрое сравнение без sqrt (сравниваем квадраты)
+      for(let i=0;i<len;i+=4){
+        const dr=d[i]-b[i];
+        const dg=d[i+1]-b[i+1];
+        const db=d[i+2]-b[i+2];
+        const diff2=dr*dr+dg*dg+db*db;
+
+        if(diff2>th){
+          // Пиксель отличается → заменяем на фон
+          d[i]=b[i];
+          d[i+1]=b[i+1];
+          d[i+2]=b[i+2];
         }
-        for(let y=1;y<h-1;y++){
-          for(let x=1;x<w-1;x++){
-            const i=y*w+x;
-            if(m[i]===0&&(m[i-1]===1||m[i+1]===1||m[i-w]===1||m[i+w]===1)){
-              const p=i*4;
-              d[p]=(d[p]+b[p])>>1;
-              d[p+1]=(d[p+1]+b[p+1])>>1;
-              d[p+2]=(d[p+2]+b[p+2])>>1;
-            }
-          }
-        }
-        px.putImageData(frame,0,0);
-      }catch(e){}
+      }
+
+      px.putImageData(frame,0,0);
     }
 
     Lx.drawImage(proc,0,0,w,h,0,0,Lc.width,Lc.height);
@@ -281,20 +262,6 @@ async function startApp(){
     requestAnimationFrame(loop);
   }
   loop();
-}
-
-// СТАРТ
-$('startBtn').onclick=async()=>{
-  $('startBtn').textContent='⏳ Загрузка...';
-  $('startBtn').disabled=true;
-  try{
-    await loadAllScripts();
-    await startApp();
-  }catch(e){
-    alert('Ошибка: '+e.message+'\n\nПопробуй:\n1) Отключить VPN\n2) Подключиться к Wi-Fi\n3) Обновить страницу');
-    $('startBtn').textContent='⚡ СТАРТ';
-    $('startBtn').disabled=false;
-  }
 };
 </script>
 </body>
